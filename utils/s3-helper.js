@@ -1,3 +1,5 @@
+import { s3Client } from "../aws-clients.js";
+
 var s3ErrorReportBucketName = null;
 
 async function createS3Bucket(bucketName) {
@@ -66,51 +68,14 @@ async function deleteObject(deleteParams) {
   }
 }
 
-async function receiveMessage(queueUrl) {
-  console.log("Receiving messages");
-  var params = {
-    QueueUrl: queueUrl,
-    WaitTimeSeconds: 20,
-  };
-  try {
-    const data = await sqsClient.receiveMessage(params).promise();
-    var messages = data.Messages;
-    console.log(messages);
-    if (typeof messages !== "undefined" && messages.length > 0) {
-      var messageBody = messages[0];
-      return messageBody;
-    }
-  } catch (err) {
-    console.log("Receiving messages failed: " + err);
-    throw err;
-  }
-}
-
-async function deleteMessage(queueUrl, recepitHandler) {
-  console.log("Deleting messages");
-  var params = {
-    QueueUrl: queueUrl,
-    ReceiptHandle: recepitHandler,
-  };
-
-  try {
-    const data = await sqsClient.deleteMessage(params).promise();
-    console.log("Message deleted");
-  } catch (err) {
-    console.log("Deleting messages failed: " + err);
-  }
-}
-
 async function getS3ErrorReportBucketName() {
   return s3ErrorReportBucketName;
 }
 
-module.exports = {
+export {
   createS3Bucket,
   deleteS3Bucket,
   clearBucket,
   deleteObject,
-  receiveMessage,
-  deleteMessage,
   getS3ErrorReportBucketName,
 };

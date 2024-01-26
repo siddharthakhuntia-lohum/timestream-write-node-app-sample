@@ -1,7 +1,8 @@
-const fs = require("fs");
-const readline = require("readline");
+import fs from "fs";
+import readline from "readline";
 
-const constants = require("../constants");
+import { writeClient } from "../aws-clients.js";
+import { DATABASE_NAME, TABLE_NAME } from "../constants.js";
 
 async function processCSV(filePath) {
   try {
@@ -55,17 +56,13 @@ async function ingestCsvRecords(filePath) {
     counter++;
 
     if (records.length === 100) {
-      promises.push(
-        submitBatch(records, counter, constants.MEASURE_VALUE_SAMPLE_TABLE)
-      );
+      promises.push(submitBatch(records, counter));
       records = [];
     }
   }
 
   if (records.length !== 0) {
-    promises.push(
-      submitBatch(records, counter, constants.MEASURE_VALUE_SAMPLE_TABLE)
-    );
+    promises.push(submitBatch(records, counter));
   }
 
   await Promise.all(promises);
@@ -75,15 +72,15 @@ async function ingestCsvRecords(filePath) {
 
 function submitBatch(records, counter) {
   const params = {
-    DatabaseName: constants.DATABASE_NAME,
-    TableName: constants.TABLE_NAME,
+    DatabaseName: DATABASE_NAME,
+    TableName: TABLE_NAME,
     Records: records,
   };
 
   var promise = writeClient.writeRecords(params).promise();
 
   return promise.then(
-    (data) => {
+    () => {
       console.log(`Processed ${counter} records.`);
     },
     (err) => {
@@ -92,4 +89,4 @@ function submitBatch(records, counter) {
   );
 }
 
-module.exports = { processCSV };
+export { processCSV };

@@ -5,7 +5,7 @@ const CT_TTL_DAYS = 7;
 const SQ_ERROR_CONFIGURATION_S3_BUCKET_NAME =
   "ess-sample-s3-error-report-bucket";
 
-module.exports = {
+export {
   DATABASE_NAME,
   TABLE_NAME,
   HT_TTL_HOURS,

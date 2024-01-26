@@ -1,6 +1,12 @@
-const constants = require("../constants");
+import {
+  DATABASE_NAME,
+  TABLE_NAME,
+  HT_TTL_HOURS,
+  CT_TTL_DAYS,
+} from "../constants.js";
 
-const timestreamDependencyHelper = require("./s3-helper");
+import { getS3ErrorReportBucketName } from "./s3-helper.js";
+import { writeClient } from "../aws-clients.js";
 
 async function createDatabase(databaseName) {
   console.log("Creating Database");
@@ -11,10 +17,8 @@ async function createDatabase(databaseName) {
   const promise = writeClient.createDatabase(params).promise();
 
   await promise.then(
-    (data) => {
-      console.log(
-        `Database ${data.Database.DatabaseName} created successfully`
-      );
+    () => {
+      console.log(`Database ${params.DatabaseName} created successfully`);
     },
     (err) => {
       if (err.code === "ConflictException") {
@@ -31,7 +35,7 @@ async function createDatabase(databaseName) {
 async function describeDatabase() {
   console.log("Describing Database");
   const params = {
-    DatabaseName: constants.DATABASE_NAME,
+    DatabaseName: DATABASE_NAME,
   };
 
   const promise = writeClient.describeDatabase(params).promise();
@@ -60,7 +64,7 @@ async function updateDatabase(updatedKmsKeyId) {
   }
   console.log("Updating Database");
   const params = {
-    DatabaseName: constants.DATABASE_NAME,
+    DatabaseName: DATABASE_NAME,
     KmsKeyId: updatedKmsKeyId,
   };
 
@@ -90,7 +94,7 @@ async function listDatabases() {
   });
 }
 
-function getDatabasesList(nextToken, databases = []) {
+async function getDatabasesList(nextToken, databases = []) {
   var params = {
     MaxResults: 15,
   };
@@ -104,7 +108,7 @@ function getDatabasesList(nextToken, databases = []) {
     .promise()
     .then(
       (data) => {
-        databases.push.apply(databases, data.Databases);
+        databases.push(...data.Databases);
         if (data.NextToken) {
           return getDatabasesList(data.NextToken, databases);
         } else {
@@ -119,14 +123,13 @@ function getDatabasesList(nextToken, databases = []) {
 
 async function createTable(databaseName, tableName) {
   console.log("Creating Table");
-  const bucketName =
-    await timestreamDependencyHelper.getS3ErrorReportBucketName();
+  const bucketName = await getS3ErrorReportBucketName();
   const params = {
     DatabaseName: databaseName,
     TableName: tableName,
     RetentionProperties: {
-      MemoryStoreRetentionPeriodInHours: constants.HT_TTL_HOURS,
-      MagneticStoreRetentionPeriodInDays: constants.CT_TTL_DAYS,
+      MemoryStoreRetentionPeriodInHours: HT_TTL_HOURS,
+      MagneticStoreRetentionPeriodInDays: CT_TTL_DAYS,
     },
     MagneticStoreWriteProperties: {
       EnableMagneticStoreWrites: true,
@@ -161,18 +164,18 @@ async function createTable(databaseName, tableName) {
 async function updateTable() {
   console.log("Updating Table");
   const params = {
-    DatabaseName: constants.DATABASE_NAME,
-    TableName: constants.TABLE_NAME,
+    DatabaseName: DATABASE_NAME,
+    TableName: TABLE_NAME,
     RetentionProperties: {
-      MemoryStoreRetentionPeriodInHours: constants.HT_TTL_HOURS,
-      MagneticStoreRetentionPeriodInDays: constants.CT_TTL_DAYS,
+      MemoryStoreRetentionPeriodInHours: HT_TTL_HOURS,
+      MagneticStoreRetentionPeriodInDays: CT_TTL_DAYS,
     },
   };
 
   const promise = writeClient.updateTable(params).promise();
 
   await promise.then(
-    (data) => {
+    () => {
       console.log("Table updated");
     },
     (err) => {
@@ -185,8 +188,8 @@ async function updateTable() {
 async function describeTable() {
   console.log("Describing Table");
   const params = {
-    DatabaseName: constants.DATABASE_NAME,
-    TableName: constants.TABLE_NAME,
+    DatabaseName: DATABASE_NAME,
+    TableName: TABLE_NAME,
   };
 
   const promise = writeClient.describeTable(params).promise();
@@ -216,7 +219,7 @@ async function listTables() {
 
 function getTablesList(nextToken, tables = []) {
   var params = {
-    DatabaseName: constants.DATABASE_NAME,
+    DatabaseName: DATABASE_NAME,
     MaxResults: 15,
   };
 
@@ -229,7 +232,7 @@ function getTablesList(nextToken, tables = []) {
     .promise()
     .then(
       (data) => {
-        tables.push.apply(tables, data.Tables);
+        tables.push(...data.Tables);
         if (data.NextToken) {
           return getTablesList(data.NextToken, tables);
         } else {
@@ -251,10 +254,10 @@ async function deleteDatabase(databaseName) {
   const promise = writeClient.deleteDatabase(params).promise();
 
   await promise.then(
-    function (data) {
+    () => {
       console.log("Deleted database " + databaseName);
     },
-    function (err) {
+    (err) => {
       if (err.code === "ResourceNotFoundException") {
         console.log(`Database ${databaseName} doesn't exists.`);
       } else {
@@ -275,10 +278,10 @@ async function deleteTable(databaseName, tableName) {
   const promise = writeClient.deleteTable(params).promise();
 
   await promise.then(
-    function (data) {
+    () => {
       console.log("Deleted table " + tableName);
     },
-    function (err) {
+    (err) => {
       if (err.code === "ResourceNotFoundException") {
         console.log(
           `Table ${tableName} or Database ${databaseName} doesn't exists.`
@@ -291,15 +294,15 @@ async function deleteTable(databaseName, tableName) {
   );
 }
 
-module.exports = {
+export {
   createDatabase,
   describeDatabase,
-  updateDatabase,
   listDatabases,
+  updateDatabase,
   createTable,
   describeTable,
-  updateTable,
   listTables,
-  deleteDatabase,
+  updateTable,
   deleteTable,
+  deleteDatabase,
 };
