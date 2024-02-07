@@ -1,21 +1,22 @@
-import AWS from "aws-sdk";
-import https from "https";
+import { TimestreamWriteClient } from "@aws-sdk/client-timestream-write";
+import { S3Client } from "@aws-sdk/client-s3";
+import { config } from "dotenv";
 
-const AWSregion = "us-east-1";
+config();
 
-AWS.config.update({ region: AWSregion });
+const AWS_REGION = process.env.AWS_REGION;
+const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
+const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+const AWS_S3_BUCKET_REGION = process.env.AWS_S3_BUCKET_REGION;
 
-const agent = new https.Agent({
-  maxSockets: 5000,
-});
-
-
-export const writeClient = new AWS.TimestreamWrite({
-  maxRetries: 10,
-  httpOptions: {
-    timeout: 20000,
-    agent: agent,
+export const writeClient = new TimestreamWriteClient({
+  region: AWS_REGION,
+  credentials: {
+    accessKeyId: AWS_ACCESS_KEY_ID,
+    secretAccessKey: AWS_SECRET_ACCESS_KEY,
   },
+  maxAttempts: 10,
+  // requestHandler: agent
 });
 
-export const s3Client = new AWS.S3({ apiVersion: "2006-03-01" });
+export const s3Client = new S3Client({ region: AWS_S3_BUCKET_REGION });
