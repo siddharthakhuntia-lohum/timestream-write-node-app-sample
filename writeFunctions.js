@@ -8,6 +8,7 @@ import * as timestreamSetupHelper from "./utils/timestreamSetup.js";
 import * as csvIngestion from "./utils/csv-ingestion.js";
 import * as s3Helper from "./utils/s3-helper.js";
 import { writeClient } from "./aws-clients.js";
+import { WriteRecordsCommand } from "@aws-sdk/client-timestream-write";
 
 const csvFilePath = "sample.csv";
 
@@ -17,24 +18,18 @@ async function writeRecordsFromCSV() {
   }
 }
 
-async function createDatabase() {
+async function setupTimestream() {
   await timestreamSetupHelper.createDatabase(DATABASE_NAME);
-  await timestreamSetupHelper.describeDatabase();
-  await timestreamSetupHelper.listDatabases();
   await s3Helper.createS3Bucket(SQ_ERROR_CONFIGURATION_S3_BUCKET_NAME);
   await timestreamSetupHelper.createTable(DATABASE_NAME, TABLE_NAME);
-  await timestreamSetupHelper.describeTable();
-  await timestreamSetupHelper.listTables();
-  await timestreamSetupHelper.updateTable();
+  // await timestreamSetupHelper.describeDatabase();
+  // await timestreamSetupHelper.listDatabases();
+  // await timestreamSetupHelper.describeTable();
+  // await timestreamSetupHelper.listTables();
+  // await timestreamSetupHelper.updateTable();
 }
 
-async function writeRecord(
-  data,
-  tableName,
-  measureName,
-  measureValue,
-  measureValueType
-) {
+async function writeRecord(data, measureName, measureValue, measureValueType) {
   //TODO: Data cleanup
   //TODO: Check if database and table exists
   const dimensions = [
@@ -70,26 +65,27 @@ async function writeRecord(
       MeasureValueType: measureValueType,
       Time: recordTime,
     },
+    {
+      
+    }
   ];
 
   const params = {
     DatabaseName: DATABASE_NAME,
-    TableName: tableName,
+    TableName: TABLE_NAME,
     Records: records,
   };
+  try {
+    const writeRecordsCommand = new WriteRecordsCommand(params);
+    const response = await writeClient.send(writeRecordsCommand);
 
-  var promise = writeClient.writeRecords(params).promise();
+    console.log("WriteRecords Status: ", response.$metadata.httpStatusCode);
 
-  return promise.then(
-    () => {},
-    (err) => {
-      console.log("Error writing record:", err);
-    }
-  );
+    return response;
+  } catch (err) {
+    console.log("Error writing records. ", err);
+    throw err;
+  }
 }
 
-export {
-    writeRecordsFromCSV,
-    createDatabase,
-    writeRecord,
-}
+export { writeRecordsFromCSV, setupTimestream, writeRecord };
